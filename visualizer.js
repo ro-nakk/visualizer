@@ -124,7 +124,6 @@ class AudioVisualizer {
     this.currentTheme = this.themes[this.options.theme];
     
     // Initialize components
-    this.initAudio();
     this.initCanvas();
     this.initVisualRenderers();
     this.initWebSocket();
@@ -681,8 +680,8 @@ class AudioVisualizer {
    */
   applyFrequencySmoothing() {
     const smoothingFactor = 0.8;
-    for (let i = 0; i < this.frequencyData.length; i++) {
-      const current = this.frequencyData[i] / 255;
+    for (const [i, value] of this.frequencyData.entries()) {
+      const current = value / 255;
       const previous = this.smoothedFrequencyData[i] || 0;
       this.smoothedFrequencyData[i] = previous * smoothingFactor + current * (1 - smoothingFactor);
     }
@@ -957,6 +956,14 @@ class AudioVisualizer {
     
     console.log('Audio visualizer destroyed');
   }
+
+  /**
+   * Initialize the visualizer asynchronously (call after construction)
+   * @returns {Promise<void>}
+   */
+  async init() {
+    await this.initAudio();
+  }
 }
 
 /**
@@ -1024,8 +1031,8 @@ class BPMDetector {
    */
   calculateEnergy(frequencyData) {
     let energy = 0;
-    for (let i = 0; i < frequencyData.length; i++) {
-      energy += frequencyData[i] * frequencyData[i];
+    for (const value of frequencyData) {
+      energy += value * value;
     }
     return energy / frequencyData.length;
   }
@@ -1142,32 +1149,25 @@ class RadialBarRenderer extends VisualRenderer {
     const centerY = this.canvas.height / 2;
     const maxRadius = Math.min(centerX, centerY) * 0.6;
     const barCount = Math.floor(128 * renderComplexity);
-    
+
     this.ctx.save();
     this.ctx.translate(centerX, centerY);
-    
-    for (let i = 0; i < barCount; i++) {
+
+    for (const i of Array.from({ length: barCount }, (_, i) => i)) {
       const angle = (i / barCount) * Math.PI * 2;
       const frequencyIndex = Math.floor((i / barCount) * frequencyData.length);
       const amplitude = frequencyData[frequencyIndex] / 255;
-      
       const barLength = maxRadius * amplitude;
       const barWidth = (maxRadius * 0.8) / barCount;
-      
       this.ctx.save();
       this.ctx.rotate(angle);
-      
-      // Create gradient for bars
       const gradient = this.ctx.createLinearGradient(0, 0, barLength, 0);
       gradient.addColorStop(0, this.theme.primary);
       gradient.addColorStop(1, this.theme.secondary);
-      
       this.ctx.fillStyle = gradient;
       this.ctx.fillRect(0, -barWidth / 2, barLength, barWidth);
-      
       this.ctx.restore();
     }
-    
     this.ctx.restore();
   }
 }
@@ -1189,20 +1189,14 @@ class TunnelWaveRenderer extends VisualRenderer {
     const centerY = this.canvas.height / 2;
     const maxRadius = Math.min(centerX, centerY) * 0.8;
     const ringCount = Math.floor(20 * renderComplexity);
-    
     this.ctx.save();
     this.ctx.translate(centerX, centerY);
-    
-    for (let i = 0; i < ringCount; i++) {
+    for (const i of Array.from({ length: ringCount }, (_, i) => i)) {
       const radius = (maxRadius * i) / ringCount;
       const frequencyIndex = Math.floor((i / ringCount) * frequencyData.length);
       const amplitude = frequencyData[frequencyIndex] / 255;
-      
-      // Create wave distortion
       const waveOffset = Math.sin(frameCount * 0.05 + i * 0.5) * amplitude * 20;
       const distortedRadius = radius + waveOffset;
-      
-      // Draw ring
       this.ctx.beginPath();
       this.ctx.arc(0, 0, distortedRadius, 0, Math.PI * 2);
       this.ctx.strokeStyle = this.theme.primary;
@@ -1210,7 +1204,6 @@ class TunnelWaveRenderer extends VisualRenderer {
       this.ctx.lineWidth = 2 + amplitude * 3;
       this.ctx.stroke();
     }
-    
     this.ctx.restore();
   }
 }
@@ -1231,26 +1224,20 @@ class AmbientTrailsRenderer extends VisualRenderer {
     const centerX = this.canvas.width / 2;
     const centerY = this.canvas.height / 2;
     const particleCount = Math.floor(50 * renderComplexity);
-    
-    // Create floating particles
-    for (let i = 0; i < particleCount; i++) {
+    for (const i of Array.from({ length: particleCount }, (_, i) => i)) {
       const frequencyIndex = Math.floor((i / particleCount) * frequencyData.length);
       const amplitude = frequencyData[frequencyIndex] / 255;
-      
       const angle = (frameCount * 0.01 + i * 0.1) % (Math.PI * 2);
       const radius = 100 + Math.sin(frameCount * 0.02 + i) * 50;
-      
       const x = centerX + Math.cos(angle) * radius;
       const y = centerY + Math.sin(angle) * radius;
       const size = 2 + amplitude * 8;
-      
       this.ctx.beginPath();
       this.ctx.arc(x, y, size, 0, Math.PI * 2);
       this.ctx.fillStyle = this.theme.accent;
       this.ctx.globalAlpha = 0.3 + amplitude * 0.4;
       this.ctx.fill();
     }
-    
     this.ctx.globalAlpha = 1.0;
   }
 }
@@ -1625,16 +1612,15 @@ This production-ready audio visualizer can be embedded in various environments:
             adaptiveRendering: true,
             targetFPS: 60
         });
-        
-        // Start with microphone
-        visualizer.startMicrophone().then(() => {
+        (async () => {
+            await visualizer.init(); // <-- REQUIRED async initialization
+            await visualizer.startMicrophone();
             visualizer.start();
-        });
-        
-        // Beat detection callback
-        visualizer.onBeat((beatData) => {
-            console.log('Beat detected!', beatData);
-        });
+            // Beat detection callback
+            visualizer.onBeat((beatData) => {
+                console.log('Beat detected!', beatData);
+            });
+        })();
     </script>
 </body>
 </html>
@@ -1644,11 +1630,13 @@ This production-ready audio visualizer can be embedded in various environments:
 ```html
 <script type="module">
     import { AudioVisualizer } from './audio-visualizer.js';
-    
     const canvas = document.getElementById('visualizer');
     const visualizer = new AudioVisualizer(canvas);
-    
-    visualizer.startMicrophone().then(() => visualizer.start());
+    (async () => {
+        await visualizer.init();
+        await visualizer.startMicrophone();
+        visualizer.start();
+    })();
 </script>
 ```
 
@@ -1657,16 +1645,12 @@ This production-ready audio visualizer can be embedded in various environments:
 ### Preload Script (preload.js):
 ```javascript
 const { contextBridge, ipcRenderer } = require('electron');
-
-// Expose audio visualizer to renderer process
 contextBridge.exposeInMainWorld('audioVisualizer', {
     create: (canvas, options) => {
-        // Import the visualizer in preload context
         const { AudioVisualizer } = require('./audio-visualizer.js');
-        return new AudioVisualizer(canvas, options);
+        const visualizer = new AudioVisualizer(canvas, options);
+        return visualizer;
     },
-    
-    // Expose IPC methods for main process communication
     sendMetadata: (metadata) => ipcRenderer.send('visualizer-metadata', metadata),
     onBeat: (callback) => ipcRenderer.on('beat-detected', callback)
 });
@@ -1674,38 +1658,33 @@ contextBridge.exposeInMainWorld('audioVisualizer', {
 
 ### Renderer Process:
 ```javascript
-// In your renderer process
 const canvas = document.getElementById('visualizer');
 const visualizer = window.audioVisualizer.create(canvas, {
     enableMixedMode: true,
     adaptiveRendering: true
 });
-
-visualizer.startMicrophone().then(() => {
+(async () => {
+    await visualizer.init();
+    await visualizer.startMicrophone();
     visualizer.start();
-    
-    // Send metadata to main process
     setInterval(() => {
         const metadata = visualizer.getMetadata();
         window.audioVisualizer.sendMetadata(metadata);
     }, 1000);
-});
+})();
 ```
 
 ## 📱 Mobile Remote Control
 
 ### WebSocket Server Integration:
 ```javascript
-// Connect to your WebSocket server
 const visualizer = new AudioVisualizer(canvas, {
     websocketUrl: 'ws://your-server.com/audio-visualizer'
 });
-
-// The visualizer will automatically:
-// 1. Generate a 4-digit pairing code
-// 2. Connect to WebSocket server
-// 3. Broadcast metadata
-// 4. Handle remote commands
+(async () => {
+    await visualizer.init();
+    // ...
+})();
 ```
 
 ### Mobile Control Interface:
@@ -1746,11 +1725,15 @@ const visualizer = new AudioVisualizer(canvas, {
 ### Performance Optimization:
 ```javascript
 const visualizer = new AudioVisualizer(canvas, {
-    fftSize: 1024,           // Smaller for better performance
-    adaptiveRendering: true, // Auto-adjust complexity
-    targetFPS: 30,          // Lower target for mobile
-    inputSwitchDebounceMs: 500 // Prevent rapid switching
+    fftSize: 1024,
+    adaptiveRendering: true,
+    targetFPS: 30,
+    inputSwitchDebounceMs: 500
 });
+(async () => {
+    await visualizer.init();
+    // ...
+})();
 ```
 
 ### Custom Visual Modes:
