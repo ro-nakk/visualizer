@@ -1591,7 +1591,7 @@ EMBEDDING GUIDE
 
 This production-ready audio visualizer can be embedded in various environments:
 
-## 🌐 Browser Usage
+##  Browser Usage
 
 ### Basic HTML Integration:
 ```html
@@ -1641,7 +1641,7 @@ This production-ready audio visualizer can be embedded in various environments:
 </script>
 ```
 
-## ⚡ Electron Integration
+##  Electron Integration
 
 ### Preload Script (preload.js):
 ```javascript
@@ -1675,7 +1675,7 @@ const visualizer = window.audioVisualizer.create(canvas, {
 })();
 ```
 
-## 📱 Mobile Remote Control
+##  Mobile Remote Control
 
 ### WebSocket Server Integration:
 ```javascript
@@ -1721,7 +1721,7 @@ const visualizer = new AudioVisualizer(canvas, {
 </script>
 ```
 
-## 🎛️ Advanced Configuration
+##  Advanced Configuration
 
 ### Performance Optimization:
 ```javascript
@@ -1763,7 +1763,7 @@ visualizer.onBeat((beatData) => {
 });
 ```
 
-## 🔧 Production Considerations
+##  Production Considerations
 
 1. **Error Handling**: Always wrap in try-catch blocks
 2. **Performance**: Use adaptive rendering for mobile devices
@@ -1771,7 +1771,7 @@ visualizer.onBeat((beatData) => {
 4. **Security**: Validate WebSocket messages in production
 5. **Accessibility**: Provide keyboard alternatives for all controls
 
-## 📦 Build Integration
+##  Build Integration
 
 ### Webpack/Rollup:
 ```javascript
