@@ -636,13 +636,14 @@ class AudioVisualizer {
         this.visualRenderers.get('trails').render(audioData, this.frameCount, this.renderComplexity);
         break;
       case 'mixed':
-      default:
+      default: {
         // Render all modes with reduced complexity
         const reducedComplexity = this.renderComplexity * 0.7;
         this.visualRenderers.get('radial').render(audioData, this.frameCount, reducedComplexity);
         this.visualRenderers.get('tunnel').render(audioData, this.frameCount, reducedComplexity);
         this.visualRenderers.get('trails').render(audioData, this.frameCount, reducedComplexity);
         break;
+      }
     }
   }
   
